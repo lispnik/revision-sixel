@@ -4,7 +4,11 @@ Display a JPEG as real **sixel** graphics inside a
 [`tv2`](../tvision/tv2) view — the CLOS-native Turbo Vision kernel — using the
 [`jpeg-sixel`](../jpeg-sixel) encoder to do the decode → quantize → sixel step.
 
-![the coast sample, as the view renders it](media/preview.png)
+![the demo: a JPEG shown as sixel graphics inside a tv2 view, with the title bar and status line](media/screenshot.png)
+
+<sub>Composited from the program's real output — the actual decoded sixel picture
+at its real cell position, with tv2's title/status chrome in the real theme
+colors (yellow-on-blue title, black-on-cyan status).</sub>
 
 ## Run
 
