@@ -10,13 +10,36 @@ Display a JPEG as real **sixel** graphics inside a
 
 ```lisp
 (asdf:load-system "tvision-sixel")
-(tvision-sixel:run)                       ; the bundled coast photo
-(tvision-sixel:run "media/flower.jpg")    ; or any baseline JPEG
+(tvision-sixel:demo)                       ; gallery: coast / nature / flower
+(tvision-sixel:run)                        ; a single image (the coast photo)
+(tvision-sixel:run "media/flower.jpg")     ; or any baseline JPEG
 ```
 
-`Esc` or `q` quits; `r` forces a redraw. You need a **sixel-capable terminal**
-(iTerm2, foot, WezTerm, mlterm, `xterm -ti vt340`, recent VTE). Check with
-`jpeg-sixel:sixel-supported-p`.
+You need a **sixel-capable terminal** (iTerm2, foot, WezTerm, mlterm,
+`xterm -ti vt340`, recent VTE). Check with `jpeg-sixel:sixel-supported-p`.
+
+Keys:
+
+| Key | Action |
+| --- | --- |
+| `←` `→`, `Space`, `n` / `p` | previous / next image (gallery) |
+| `?`, `F1` | toggle the help overlay |
+| `r` | redraw / re-emit the sixel |
+| `Esc`, `q` | quit |
+
+## Standalone executable
+
+```sh
+make bin            # dumps ./tvision-sixel-demo (SBCL image, samples baked in)
+./tvision-sixel-demo               # runs the gallery
+./tvision-sixel-demo some.jpg …    # or show your own baseline JPEGs
+```
+
+`build.lisp` bakes the bundled JPEGs into the saved image (`*embedded-images*`)
+and dumps an executable whose toplevel is `tvision-sixel:main`. At startup the
+embedded bytes are written to a temp dir, so the binary is **self-contained** —
+it needs neither the source tree nor the media files. Pass file paths as
+arguments to show your own images instead.
 
 ## How it works
 
@@ -48,8 +71,10 @@ Key pieces, all in `src/tvision-sixel.lisp`:
 | `image-view` | a `tv2:view` subclass (`reactive-class`) holding the cached sixel + geometry |
 | `prepare-sixel` | size the image area and encode the JPEG to a fitted sixel string |
 | `draw` (method) | paint the cell chrome; leave the image area blank |
-| `emit-overlay` | write the sixel to `screen-out` at the image origin, DECSC/DECRC-wrapped |
-| `run` | the tv2 event loop, plus one line to emit the overlay after each flush |
+| `emit-overlay` | write the sixel to `screen-out` at the image origin, DECSC/DECRC-wrapped (skipped while help is up) |
+| `draw-help` | a centered, framed keybinding panel drawn in cells; painting cells over the image erases the sixel underneath |
+| `run` / `demo` | the tv2 event loop (via `run-gallery`), plus one line to emit the overlay after each flush |
+| `main` | executable toplevel: materializes the embedded samples (or takes file args) and runs the gallery |
 
 ## Dependencies & loading
 

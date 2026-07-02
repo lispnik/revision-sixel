@@ -56,6 +56,15 @@
     ;; emit-overlay must be a no-op with no screen (no error, no output)
     (check (let ((tvision:*screen* nil)) (tvision-sixel::emit-overlay v) t)
            "emit-overlay is a no-op with no screen")
+    ;; help overlay: toggling suppresses the sixel and draw stays safe
+    (check (not (tvision-sixel::iv-help-p v)) "help starts hidden")
+    (setf (tvision-sixel::iv-help-p v) t)
+    (check (let ((tvision:*screen* nil)) (tv2:draw v) t) "help draw is safe")
+    (check (let ((tvision:*screen* nil)) (tvision-sixel::emit-overlay v) t)
+           "emit-overlay is a no-op while help is up")
+    (setf (tvision-sixel::iv-help-p v) nil)
+    (check (tv2::keymap-lookup tvision-sixel::*image-keys* #\?)
+           "keymap binds ? (help)")
     ;; the keymap resolves the quit binding
     (check (tv2::keymap-lookup tvision-sixel::*image-keys* #\q)
            "keymap binds q")

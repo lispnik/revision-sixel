@@ -17,7 +17,7 @@ endef
 SOURCES := tvision-sixel.asd $(wildcard src/*.lisp)
 
 .DEFAULT_GOAL := all
-.PHONY: all test clean
+.PHONY: all test bin clean
 
 all: $(SOURCES)
 	$(call asdf-load,(asdf:load-system "tvision-sixel"))
@@ -25,5 +25,11 @@ all: $(SOURCES)
 test: $(SOURCES) $(wildcard tests/*.lisp)
 	$(call asdf-load,(asdf:test-system "tvision-sixel"))
 
+# Standalone, self-contained executable (samples baked in).
+bin: tvision-sixel-demo
+tvision-sixel-demo: $(SOURCES) build.lisp
+	$(SBCL) --script build.lisp
+
 clean:
 	rm -rf $(HOME)/.cache/common-lisp/*/$(CURDIR)
+	rm -f tvision-sixel-demo

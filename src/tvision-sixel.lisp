@@ -42,6 +42,7 @@
    (sixel  :initform nil     :accessor iv-sixel)  ; cached sixel string, or NIL
    (col    :initform 0       :accessor iv-col)    ; absolute cell origin of image
    (row    :initform 0       :accessor iv-row)
+   (help-p :initform nil     :accessor iv-help-p) ; help overlay shown? (reactive)
    (cell-w :initarg :cell-w :initform 10 :accessor iv-cell-w) ; px per cell
    (cell-h :initarg :cell-h :initform 20 :accessor iv-cell-h))
   (:metaclass tv2:reactive-class)
@@ -83,9 +84,65 @@
   (prepare-sixel v)
   (setf tv2::*dirty* t))
 
+;;; --- help overlay -----------------------------------------------------------
+
+(defparameter *help-lines*
+  '(""
+    "  tvision-sixel — a jpeg-sixel picture inside a tv2 view"
+    ""
+    "   ←  →         previous / next image"
+    "   Space  n     next image"
+    "   p            previous image"
+    "   r            redraw / re-emit the sixel"
+    "   ?  F1        toggle this help"
+    "   Esc  q       quit"
+    ""
+    "  The image is decoded and quantized by jpeg-sixel, then"
+    "  written as a sixel escape straight to the terminal after"
+    "  tv2 flushes its character cells."
+    ""
+    "  Press any key to close help."
+    ""))
+
+(defun draw-box (v x0 y0 bw bh attr)
+  "Draw a light box-drawing frame of BW×BH at view-local (X0,Y0) in ATTR."
+  (let* ((mid (make-string (max 0 (- bw 2)) :initial-element #\─))
+         (top (format nil "┌~a┐" mid))
+         (bot (format nil "└~a┘" mid)))
+    (tv2::draw-text v x0 y0 top attr)
+    (tv2::draw-text v x0 (+ y0 (1- bh)) bot attr)
+    (loop for r from 1 below (1- bh) do
+      (tv2::draw-text v x0 (+ y0 r) "│" attr)
+      (tv2::draw-text v (+ x0 (1- bw)) (+ y0 r) "│" attr))))
+
+(defun draw-help (v)
+  "Fill the view and draw a centered help panel (cells only — no sixel)."
+  (let* ((b   (tv2:view-bounds v))
+         (w   (tvision::rect-width b))
+         (h   (tvision::rect-height b))
+         (bg  (tv2::role :normal))
+         (panel (tv2::role :label))
+         (lines *help-lines*)
+         (bw  (min w (+ 4 (reduce #'max lines :key #'length))))
+         (bh  (min h (+ 2 (length lines))))
+         (x0  (max 0 (floor (- w bw) 2)))
+         (y0  (max 0 (floor (- h bh) 2))))
+    ;; erase everything (this also paints over any sixel pixels underneath)
+    (dotimes (r h) (tv2::fill-row v 0 r w bg))
+    ;; panel background + frame + text
+    (dotimes (r bh) (tv2::fill-row v x0 (+ y0 r) bw panel))
+    (draw-box v x0 y0 bw bh panel)
+    (loop for line in lines
+          for r from 1
+          while (< r (1- bh))
+          do (tv2::draw-text v (+ x0 1) (+ y0 r) line panel))))
+
 (defmethod tv2:draw ((v image-view))
   "Paint the cell chrome: a title bar, a hint line, and a cleared image area.
-   The picture is drawn separately (see EMIT-OVERLAY) once the cells are flushed."
+   The picture is drawn separately (see EMIT-OVERLAY) once the cells are flushed.
+   When the help overlay is up, draw that instead and skip the picture."
+  (when (iv-help-p v)
+    (return-from tv2:draw (draw-help v)))
   (let* ((b      (tv2:view-bounds v))
          (w      (tvision::rect-width b))
          (h      (tvision::rect-height b))
@@ -106,8 +163,8 @@
     (tv2::draw-text v 1 (1- h)
                     (if (iv-sixel v)
                         (if (> n 1)
-                            " <-/->: prev/next     r: redraw     Esc/q: quit "
-                            " r: redraw     Esc/q: quit ")
+                            " <-/->: prev/next     ?: help     Esc/q: quit "
+                            " ?: help     r: redraw     Esc/q: quit ")
                         " image failed to load (baseline JPEG required) ")
                     status)))
 
@@ -116,7 +173,7 @@
    Wrapped in DECSC/DECRC (save/restore cursor) so it leaves tv2's cursor and
    scroll state untouched. A no-op when there is no sixel or no live screen."
   (let ((sx (iv-sixel v)))
-    (when (and sx tvision:*screen*)
+    (when (and sx tvision:*screen* (not (iv-help-p v)))
       (let ((out (tvision::screen-out tvision:*screen*))
             (esc (code-char 27)))
         ;; ESC 7            save cursor
@@ -150,17 +207,33 @@
   (declare (ignore e))
   (show-image v (1- (iv-index v))))
 
+(tv2:define-command tvs-help (v e)
+  (declare (ignore e))
+  (setf (iv-help-p v) (not (iv-help-p v))))
+
 (tv2:defkeymap *image-keys* ()
   (:esc   tvs-quit)
   (#\q    tvs-quit)
   (#\Q    tvs-quit)
   (#\r    tvs-redraw)
   (#\R    tvs-redraw)
+  (#\?    tvs-help)
+  (:f1    tvs-help)
   (:right tvs-next)
   (#\Space tvs-next)
   (#\n    tvs-next)
   (:left  tvs-prev)
   (#\p    tvs-prev))
+
+(defmethod tv2:handle-event ((v image-view) (e tv2:key-event))
+  "While the help overlay is up it is modal: q/Esc still quit, but any other key
+   just dismisses it. Otherwise fall through to the normal keymap dispatch."
+  (if (iv-help-p v)
+      (let ((k (tv2:event-keysym e)))
+        (if (member k (list #\q #\Q :esc) :test #'eql)
+            (setf tv2::*running* nil)
+            (setf (iv-help-p v) nil)))
+      (call-next-method)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Runner
@@ -215,3 +288,48 @@
   "The gallery demo: cycle through IMAGES (default: the bundled samples) with
    the left/right arrows (or Space / n / p). Esc or q quits."
   (run-gallery (or images (list *default-image*))))
+
+;;; ---------------------------------------------------------------------------
+;;; Standalone executable
+;;;
+;;; save-lisp-and-die snapshots the heap but not external files, so the sample
+;;; JPEGs are baked into *EMBEDDED-IMAGES* at build time (see build.lisp) and
+;;; written to a temp dir at startup — the binary carries its own pictures.
+;;; ---------------------------------------------------------------------------
+
+(defvar *embedded-images* nil
+  "In a dumped executable: a list of (basename . (unsigned-byte 8) vector) baked
+   in at build time. NIL in a normal image (the bundled files are used instead).")
+
+(defun slurp-bytes (path)
+  "Read PATH into a fresh (unsigned-byte 8) vector."
+  (with-open-file (in path :element-type '(unsigned-byte 8))
+    (let ((buf (make-array (file-length in) :element-type '(unsigned-byte 8))))
+      (read-sequence buf in)
+      buf)))
+
+(defun materialize-embedded (&optional (embedded *embedded-images*))
+  "Write EMBEDDED (name . bytes) pairs to a fresh temp directory and return the
+   list of pathnames, in order."
+  (let ((dir (ensure-directories-exist
+              (merge-pathnames (format nil "tvision-sixel-~d/" (sb-unix:unix-getpid))
+                               (uiop:temporary-directory)))))
+    (loop for (name . bytes) in embedded
+          for path = (merge-pathnames name dir)
+          do (with-open-file (out path :direction :output :if-exists :supersede
+                                       :element-type '(unsigned-byte 8))
+               (write-sequence bytes out))
+          collect path)))
+
+(defun main ()
+  "Executable entry point. Any command-line arguments that name existing files
+   are shown as the gallery; otherwise the embedded (or bundled) samples are."
+  (let ((paths (remove-if-not #'probe-file (rest sb-ext:*posix-argv*))))
+    (handler-case
+        (cond (paths (run-gallery paths))
+              (*embedded-images* (demo (materialize-embedded)))
+              (t (demo)))
+      (error (e)
+        (format *error-output* "~&tvision-sixel: ~a~%" e))))
+  (finish-output)
+  (uiop:quit 0))
