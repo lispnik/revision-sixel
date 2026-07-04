@@ -1,6 +1,6 @@
-;;;; package.lisp --- tvision-sixel
+;;;; package.lisp --- revision-sixel
 
-(defpackage #:tvision-sixel
+(defpackage #:revision-sixel
   (:use #:cl)
   (:documentation
    "Display a JPEG (decoded + quantized by jpeg-sixel) as sixel graphics inside a

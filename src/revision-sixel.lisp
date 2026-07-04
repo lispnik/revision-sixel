@@ -1,4 +1,4 @@
-;;;; tvision-sixel.lisp --- JPEGs shown as sixel graphics inside a revision view.
+;;;; revision-sixel.lisp --- JPEGs shown as sixel graphics inside a revision view.
 ;;;;
 ;;;; revision renders into a character-cell back buffer and flushes only the cells
 ;;;; that changed. Sixel graphics are not cells — they are a raw escape sequence
@@ -17,10 +17,10 @@
 ;;;; Switching images (the gallery demo) mutates a reactive slot, which forces a
 ;;;; redraw and a fresh emit — so the same seam handles dynamic content.
 
-(in-package #:tvision-sixel)
+(in-package #:revision-sixel)
 
 (defun bundled-image (name)
-  (asdf:system-relative-pathname "tvision-sixel"
+  (asdf:system-relative-pathname "revision-sixel"
                                  (format nil "media/~a" name)))
 
 (defparameter *default-image* (bundled-image "coast.jpg")
@@ -88,7 +88,7 @@
 
 (defparameter *help-lines*
   '(""
-    "  tvision-sixel — a jpeg-sixel picture inside a revision view"
+    "  revision-sixel — a jpeg-sixel picture inside a revision view"
     ""
     "   ←  →         previous / next image"
     "   Space  n     next image"
@@ -312,7 +312,7 @@
   "Write EMBEDDED (name . bytes) pairs to a fresh temp directory and return the
    list of pathnames, in order."
   (let ((dir (ensure-directories-exist
-              (merge-pathnames (format nil "tvision-sixel-~d/" (sb-unix:unix-getpid))
+              (merge-pathnames (format nil "revision-sixel-~d/" (sb-unix:unix-getpid))
                                (uiop:temporary-directory)))))
     (loop for (name . bytes) in embedded
           for path = (merge-pathnames name dir)
@@ -330,6 +330,6 @@
               (*embedded-images* (demo (materialize-embedded)))
               (t (demo)))
       (error (e)
-        (format *error-output* "~&tvision-sixel: ~a~%" e))))
+        (format *error-output* "~&revision-sixel: ~a~%" e))))
   (finish-output)
   (uiop:quit 0))

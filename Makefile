@@ -1,4 +1,4 @@
-# Makefile --- tvision-sixel
+# Makefile --- revision-sixel
 #
 # Usage:
 #   make        # compile/load the system (build check)
@@ -14,22 +14,22 @@ $(SBCL) --non-interactive \
 	--eval '(uiop:quit 0)'
 endef
 
-SOURCES := tvision-sixel.asd $(wildcard src/*.lisp)
+SOURCES := revision-sixel.asd $(wildcard src/*.lisp)
 
 .DEFAULT_GOAL := all
 .PHONY: all test bin clean
 
 all: $(SOURCES)
-	$(call asdf-load,(asdf:load-system "tvision-sixel"))
+	$(call asdf-load,(asdf:load-system "revision-sixel"))
 
 test: $(SOURCES) $(wildcard tests/*.lisp)
-	$(call asdf-load,(asdf:test-system "tvision-sixel"))
+	$(call asdf-load,(asdf:test-system "revision-sixel"))
 
 # Standalone, self-contained executable (samples baked in).
-bin: tvision-sixel-demo
-tvision-sixel-demo: $(SOURCES) build.lisp
+bin: revision-sixel-demo
+revision-sixel-demo: $(SOURCES) build.lisp
 	$(SBCL) --script build.lisp
 
 clean:
 	rm -rf $(HOME)/.cache/common-lisp/*/$(CURDIR)
-	rm -f tvision-sixel-demo
+	rm -f revision-sixel-demo
