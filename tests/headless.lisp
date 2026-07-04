@@ -2,7 +2,7 @@
 ;;;;
 ;;;; These exercise everything that does NOT need a live terminal: view
 ;;;; construction, geometry, real sixel generation from the bundled JPEG, and
-;;;; that DRAW is safe when there is no screen (tvision:*screen* is NIL, so the
+;;;; that DRAW is safe when there is no screen (revision::*screen* is NIL, so the
 ;;;; cell writes are no-ops). The interactive RUN loop needs a real sixel
 ;;;; terminal and is not driven here.
 
@@ -37,7 +37,7 @@
                           :files (list tvision-sixel:*default-image*)
                           :cell-w 10 :cell-h 20)))
     ;; give it an 80x24 full-screen bounds
-    (setf (tv2:view-bounds v) (tv2:rect 0 0 80 24))
+    (setf (revision::view-bounds v) (revision::rect 0 0 80 24))
     (check (probe-file tvision-sixel:*default-image*)
            "bundled sample image exists")
     (check (>= (length tvision-sixel:*gallery*) 1)
@@ -51,32 +51,32 @@
                   (= (tvision-sixel::iv-row v) 2))
              "image origin inset to (2,2)"))
     ;; draw must be a no-op-safe call when there is no screen
-    (check (let ((tvision:*screen* nil)) (tv2:draw v) t)
+    (check (let ((revision::*screen* nil)) (revision::draw v) t)
            "draw is safe with no screen")
     ;; emit-overlay must be a no-op with no screen (no error, no output)
-    (check (let ((tvision:*screen* nil)) (tvision-sixel::emit-overlay v) t)
+    (check (let ((revision::*screen* nil)) (tvision-sixel::emit-overlay v) t)
            "emit-overlay is a no-op with no screen")
     ;; help overlay: toggling suppresses the sixel and draw stays safe
     (check (not (tvision-sixel::iv-help-p v)) "help starts hidden")
     (setf (tvision-sixel::iv-help-p v) t)
-    (check (let ((tvision:*screen* nil)) (tv2:draw v) t) "help draw is safe")
-    (check (let ((tvision:*screen* nil)) (tvision-sixel::emit-overlay v) t)
+    (check (let ((revision::*screen* nil)) (revision::draw v) t) "help draw is safe")
+    (check (let ((revision::*screen* nil)) (tvision-sixel::emit-overlay v) t)
            "emit-overlay is a no-op while help is up")
     (setf (tvision-sixel::iv-help-p v) nil)
-    (check (tv2::keymap-lookup tvision-sixel::*image-keys* #\?)
+    (check (revision::keymap-lookup tvision-sixel::*image-keys* #\?)
            "keymap binds ? (help)")
     ;; the keymap resolves the quit binding
-    (check (tv2::keymap-lookup tvision-sixel::*image-keys* #\q)
+    (check (revision::keymap-lookup tvision-sixel::*image-keys* #\q)
            "keymap binds q")
-    (check (tv2::keymap-lookup tvision-sixel::*image-keys* :esc)
+    (check (revision::keymap-lookup tvision-sixel::*image-keys* :esc)
            "keymap binds Esc")
-    (check (tv2::keymap-lookup tvision-sixel::*image-keys* :right)
+    (check (revision::keymap-lookup tvision-sixel::*image-keys* :right)
            "keymap binds Right (next)"))
   ;; gallery navigation: switching images re-encodes a fresh sixel
   (when (> (length tvision-sixel:*gallery*) 1)
     (let ((g (make-instance 'tvision-sixel::image-view
                             :files tvision-sixel:*gallery* :cell-w 10 :cell-h 20)))
-      (setf (tv2:view-bounds g) (tv2:rect 0 0 80 24))
+      (setf (revision::view-bounds g) (revision::rect 0 0 80 24))
       (tvision-sixel::prepare-sixel g)
       (let ((i0 (tvision-sixel::iv-index g)))
         (tvision-sixel::show-image g (1+ i0))

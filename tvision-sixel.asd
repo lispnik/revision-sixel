@@ -1,18 +1,18 @@
 ;;;; tvision-sixel.asd
 ;;;;
 ;;;; A small demo: decode a JPEG with jpeg-sixel and display it as real sixel
-;;;; graphics inside a tv2 (CLOS-native Turbo Vision) view.
+;;;; graphics inside a revision (CLOS-native Turbo Vision) view.
 ;;;;
 ;;;; Both dependencies are sibling projects under ~/Projects/common-lisp/ and are
 ;;;; resolved by the global ASDF source-registry (:tree) config — no ocicl entry
-;;;; is needed for them. tv2 pulls in its own deps via tvision's systems/.
+;;;; is needed for them. revision pulls in its own deps via tvision's systems/.
 
 (asdf:defsystem "tvision-sixel"
-  :description "Display a JPEG as sixel graphics inside a tv2 Turbo Vision view."
+  :description "Display a JPEG as sixel graphics inside a revision Turbo Vision view."
   :author "Matthew Kennedy <burnsidemk@gmail.com>"
   :license "MIT"
   :version "0.1.0"
-  :depends-on ("tv2" "jpeg-sixel")
+  :depends-on ("revision" "jpeg-sixel")
   :serial t
   :components ((:module "src"
                 :serial t
